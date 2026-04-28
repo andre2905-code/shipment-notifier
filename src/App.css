@@ -1,0 +1,63 @@
+/* Nav Style */
+nav {
+  display: flex;
+  padding: .25rem;
+  background-color: var(--muted);
+  border-radius: var(--rounded-lg);
+  gap: .25rem;
+  max-width: var(--max-width);
+  margin: 1.5rem auto;
+}
+
+nav .nav-link {
+  padding: .5rem .75rem;
+  display: flex;
+  flex: 1 1 0%;
+  justify-content: center;
+  align-items: center;
+  border-radius: calc(var(--rounded-lg) - 2px);
+  text-decoration: none;
+  color: var(--muted-foreground);
+  gap: .5rem;
+  font-size: 14px;
+  font-weight: 500;
+}
+nav .nav-link .nav-icon {
+  height: 16px;
+}
+nav .nav-link.active {
+  color: var(--default-foreground);
+  background-color: #fff;
+}
+
+/* General Main Section Style */
+main {
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: .75rem;
+}
+.section-heading .add-button {
+  padding: .75rem;
+  background-color: var(--primary-color);
+  color: #fff;
+  border-radius: var(--rounded-lg);
+  display: flex;
+  gap: .375rem;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+}
+
+section .no-results {
+  border-radius: var(--rounded-lg);
+  color: var(--muted-foreground);
+  padding: 1.5rem;
+  text-align: center;
+  border: 1px solid var(--border-color);
+}
