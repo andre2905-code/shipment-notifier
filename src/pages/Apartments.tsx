@@ -1,20 +1,20 @@
 import { Plus } from "lucide-react";
 
 const apts = [
-  // {
-  //   id: 1,
-  //   ape_numero: "101",
-  //   block: "Bloco A",
-  //   inquilino: "João Silva",
-  //   telefone: "(11) 92345-6789",
-  // },
-  // {
-  //   id: 2,
-  //   ape_numero: "102",
-  //   block: "Bloco A",
-  //   inquilino: "Maria Oliveira",
-  //   telefone: "(11) 98765-4321",
-  // },
+  {
+    id: 1,
+    ape_numero: "101",
+    block: "Bloco A",
+    inquilino: "João Silva",
+    telefone: "(11) 92345-6789",
+  },
+  {
+    id: 2,
+    ape_numero: "102",
+    block: "Bloco A",
+    inquilino: "Maria Oliveira",
+    telefone: "(11) 98765-4321",
+  },
 ]
 
 const Apartments = () => {
