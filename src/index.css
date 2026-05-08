@@ -1,0 +1,56 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  outline: 0;
+}
+:root {
+  --primary-color: hsl(215 60% 45%);
+  --primary-muted-foreground: hsl(0 0% 100% / .7);
+  --default-foreground: hsl(215 25% 15%);
+  --muted-foreground: hsl(215 12% 50%);
+  --border-color: hsl(212, 22%, 88%);
+
+  --muted: hsl(210 15% 93%);
+  --rounded-lg: 10px;
+
+  --max-width: 64rem;
+}
+
+button {
+  cursor: pointer;
+}
+
+header {
+  background-color: var(--primary-color);
+  padding: 1rem;
+  color: #fff;
+  display: block;
+}
+
+header .header-content {
+  display: flex;
+  gap: 10px;
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+header .header-content .header-icon {
+  height: 34px;
+}
+
+header h1 {
+  font-size: 1.125rem;
+}
+
+h2 {
+  font-size: 14px;
+  color: var(--muted-foreground);
+  font-weight: 600;
+}
+header small {
+  color: var(--primary-muted-foreground);
+}
+
+
+
