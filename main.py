@@ -330,7 +330,7 @@ async def solicitar_comprovante_whatsapp(nome: str, telefone: str):
         print(f"🔴 [ERRO TWILIO] Falha ao solicitar comprovante: {str(e)}")
 
 
-# Rota 4: Consultar Moradores e Encomendas (para fins de teste)
+# Rota 4: Consultar Moradores e Encomendas 
 @app.get("/consultar-morador/{bloco}/{apartamento}", status_code=status.HTTP_200_OK)
 async def consultar_morador(
     bloco: str,
@@ -349,7 +349,7 @@ async def consultar_morador(
             detail="Morador não encontrado para este bloco e apartamento."
         )
 
-    # 2. Busca encomendas pendentes (que não estão com status 'ENTREGUE')
+    # 2. Busca encomendas pendentes 
     encomendas_pendentes = db.query(Encomenda).filter(
         Encomenda.morador_id == morador.id,
         Encomenda.status != 'ENTREGUE' 
@@ -371,4 +371,42 @@ async def consultar_morador(
             } 
             for enc in encomendas_pendentes
         ]
+    }
+
+
+# Rota 5: Listar Encomendas Pendentes
+@app.get("/encomendas-pendentes", status_code=status.HTTP_200_OK)
+async def listar_encomendas_pendentes(db: Session = Depends(get_db)):
+    # Faz um JOIN entre Encomenda e Morador para pegar os dados de ambos
+    # Filtra apenas as encomendas que não foram entregues
+    resultados = db.query(Encomenda, Morador).join(
+        Morador, Encomenda.morador_id == Morador.id
+    ).filter(
+        Encomenda.status != 'ENTREGUE'
+    ).all()
+
+    # Se não houver nada pendente
+    if not resultados:
+        return {
+            "mensagem": "A portaria está limpa! Nenhuma encomenda pendente.",
+            "total_pendentes": 0,
+            "encomendas": []
+        }
+
+    # Monta a lista formatada
+    lista_pendentes = []
+    for encomenda, morador in resultados:
+        lista_pendentes.append({
+            "codigo_retirada": encomenda.codigo_retirada,
+            "status": encomenda.status,
+            "morador": {
+                "nome": morador.nome,
+                "bloco": morador.bloco,
+                "apartamento": morador.apartamento
+            }
+        })
+
+    return {
+        "total_pendentes": len(lista_pendentes),
+        "encomendas": lista_pendentes
     }
