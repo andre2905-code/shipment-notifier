@@ -328,3 +328,47 @@ async def solicitar_comprovante_whatsapp(nome: str, telefone: str):
         
     except Exception as e:
         print(f"🔴 [ERRO TWILIO] Falha ao solicitar comprovante: {str(e)}")
+
+
+# Rota 4: Consultar Moradores e Encomendas (para fins de teste)
+@app.get("/consultar-morador/{bloco}/{apartamento}", status_code=status.HTTP_200_OK)
+async def consultar_morador(
+    bloco: str,
+    apartamento: str,
+    db: Session = Depends(get_db)
+):
+    # 1. Busca o morador usando bloco e apartamento
+    morador = db.query(Morador).filter(
+        Morador.bloco == bloco,
+        Morador.apartamento == apartamento
+    ).first()
+
+    if not morador:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Morador não encontrado para este bloco e apartamento."
+        )
+
+    # 2. Busca encomendas pendentes (que não estão com status 'ENTREGUE')
+    encomendas_pendentes = db.query(Encomenda).filter(
+        Encomenda.morador_id == morador.id,
+        Encomenda.status != 'ENTREGUE' 
+    ).all()
+
+    # 3. Formata a resposta
+    return {
+        "morador": {
+            "id": morador.id,
+            "nome": morador.nome,
+            "whatsapp": morador.whatsapp,
+            "status_validacao": morador.status_validacao
+        },
+        "total_encomendas_pendentes": len(encomendas_pendentes),
+        "encomendas": [
+            {
+                "codigo_retirada": enc.codigo_retirada,
+                "status": enc.status
+            } 
+            for enc in encomendas_pendentes
+        ]
+    }
