@@ -7,7 +7,16 @@ import dotenv
 import random
 from twilio.rest import Client
 from twilio.http.async_http_client import AsyncTwilioHttpClient
-from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, status, BackgroundTasks
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    Depends,
+    UploadFile,
+    File,
+    Form,
+    status,
+    BackgroundTasks,
+)
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from PIL import Image
@@ -24,8 +33,7 @@ if not API_KEY:
 if genai:
     genai.configure(api_key=API_KEY)
     modelo_ia = genai.GenerativeModel(
-        'gemini-2.5-flash',
-        generation_config={"response_mime_type": "application/json"}
+        "gemini-2.5-flash", generation_config={"response_mime_type": "application/json"}
     )
 
 # Cria as tabelas se não existirem
@@ -41,22 +49,24 @@ class MoradorCreateSchema(BaseModel):
     bloco: str
     apartamento: str
 
+
 @app.post("/cadastrar-morador", status_code=status.HTTP_201_CREATED)
 async def cadastrar_morador(
-    dados: MoradorCreateSchema, 
+    dados: MoradorCreateSchema,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     # Verifica se já existe um morador cadastrado com o mesmo bloco e apartamento
-    morador_existente = db.query(Morador).filter(
-        Morador.bloco == dados.bloco,
-        Morador.apartamento == dados.apartamento
-    ).first()
-    
+    morador_existente = (
+        db.query(Morador)
+        .filter(Morador.bloco == dados.bloco, Morador.apartamento == dados.apartamento)
+        .first()
+    )
+
     if morador_existente:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="Já existe um morador cadastrado neste bloco e apartamento."
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Já existe um morador cadastrado neste bloco e apartamento.",
         )
 
     # Cria o morador. O status_validacao vai como 'PENDENTE' por padrão (configurado no models.py)
@@ -64,39 +74,39 @@ async def cadastrar_morador(
         nome=dados.nome,
         whatsapp=dados.whatsapp,
         bloco=dados.bloco,
-        apartamento=dados.apartamento
+        apartamento=dados.apartamento,
     )
-    
+
     db.add(novo_morador)
     db.commit()
-    db.refresh(novo_morador) # Pega o ID gerado pelo banco para retornar
-    
+    db.refresh(novo_morador)  # Pega o ID gerado pelo banco para retornar
+
     # Dispara a mensagem de boas-vindas pedindo o comprovante
     background_tasks.add_task(
-        solicitar_comprovante_whatsapp,
-        novo_morador.nome,
-        novo_morador.whatsapp
+        solicitar_comprovante_whatsapp, novo_morador.nome, novo_morador.whatsapp
     )
-    
+
     return {
         "mensagem": "Morador pré-cadastrado com sucesso!",
         "morador_id": novo_morador.id,
         "status": novo_morador.status_validacao,
-        "notificacao": "Solicitação de comprovante enviada via WhatsApp."
+        "notificacao": "Solicitação de comprovante enviada via WhatsApp.",
     }
 
 
 # Rota 2: Validar Comprovante de Residência com IA
 @app.post("/validar-comprovante", status_code=status.HTTP_200_OK)
 async def validar_comprovante(
-    morador_id: int = Form(...), 
-    comprovante: UploadFile = File(...), 
-    db: Session = Depends(get_db)
+    morador_id: int = Form(...),
+    comprovante: UploadFile = File(...),
+    db: Session = Depends(get_db),
 ):
     # Verifica se o morador existe
     morador = db.query(Morador).filter(Morador.id == morador_id).first()
     if not morador:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Morador não encontrado.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Morador não encontrado."
+        )
 
     # Prepara a imagem e gerencia recursos da memória
     try:
@@ -104,19 +114,19 @@ async def validar_comprovante(
         imagem_pil = Image.open(io.BytesIO(conteudo_imagem))
     except Exception:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="Não foi possível ler a imagem. Certifique-se de que é um arquivo válido (JPG/PNG)."
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Não foi possível ler a imagem. Certifique-se de que é um arquivo válido (JPG/PNG).",
         )
     finally:
-        await comprovante.close() # Libera o arquivo enviado da memória do servidor
+        await comprovante.close()  # Libera o arquivo enviado da memória do servidor
 
     # Prompt para a IA
-    endereco_oficial = "Rua das Palmeiras, 1500, Araçatuba - SP" 
-    
+    endereco_oficial = "Rua das Palmeiras, 1500, Araçatuba - SP"
+
     prompt = f"""
     Você é um auditor de condomínio. Analise o comprovante de residência na imagem.
     O endereço oficial do nosso condomínio é: {endereco_oficial}.
-    
+
     Regras:
     1. Extraia o endereço legível na imagem.
     2. Compare com o endereço oficial (ignore diferenças de CEP ou abreviações como R. ou Rua).
@@ -132,34 +142,30 @@ async def validar_comprovante(
     try:
         if not genai:
             raise Exception("Biblioteca do Google Gemini não instalada.")
-            
+
         resposta_ia = await modelo_ia.generate_content_async([prompt, imagem_pil])
         resultado = json.loads(resposta_ia.text)
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY, 
-            detail=f"Erro na comunicação com a IA: {str(e)}"
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Erro na comunicação com a IA: {str(e)}",
         )
 
     # Processamento do Resultado e Atualização do Banco
     is_valido = resultado.get("mesmo_condominio", False)
-    
+
     if is_valido:
-        morador.status_validacao = 'APROVADO'
+        morador.status_validacao = "APROVADO"
         msg_sucesso = "Comprovante validado automaticamente pela IA!"
         status_final = "sucesso"
     else:
-        morador.status_validacao = 'REJEITADO'
+        morador.status_validacao = "REJEITADO"
         msg_sucesso = "O endereço não confere com os registros do condomínio."
         status_final = "negado"
 
     db.commit()
-    
-    return {
-        "status": status_final,
-        "mensagem": msg_sucesso,
-        "dados_ia": resultado
-    }
+
+    return {"status": status_final, "mensagem": msg_sucesso, "dados_ia": resultado}
 
 
 # Rota 3: Registrar Encomenda e Notificar Morador
@@ -167,75 +173,78 @@ class EncomendaSchema(BaseModel):
     bloco: str
     apartamento: str
 
+
 @app.post("/registrar-encomenda", status_code=status.HTTP_201_CREATED)
 async def registrar_encomenda(
-    dados: EncomendaSchema, 
+    dados: EncomendaSchema,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     # Só permite registrar se o morador estiver validado pela IA
-    morador = db.query(Morador).filter(
-        Morador.bloco == dados.bloco,
-        Morador.apartamento == dados.apartamento,
-        Morador.status_validacao == 'APROVADO'
-    ).first()
-    
+    morador = (
+        db.query(Morador)
+        .filter(
+            Morador.bloco == dados.bloco,
+            Morador.apartamento == dados.apartamento,
+            Morador.status_validacao == "APROVADO",
+        )
+        .first()
+    )
+
     if not morador:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, 
-            detail="Morador não encontrado ou comprovante de residência ainda não aprovado."
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Morador não encontrado ou comprovante de residência ainda não aprovado.",
         )
-    
+
     codigo_hash = str(random.randint(100000, 999999))
-    
-    nova_encomenda = Encomenda(
-        morador_id=morador.id, 
-        codigo_retirada=codigo_hash
-    )
-    
+
+    nova_encomenda = Encomenda(morador_id=morador.id, codigo_retirada=codigo_hash)
+
     db.add(nova_encomenda)
     db.commit()
-    
+
     # Chama a função do Twilio em segundo plano
     background_tasks.add_task(
-        notificar_morador_whatsapp,
-        morador.nome,
-        morador.whatsapp,
-        codigo_hash
+        notificar_morador_whatsapp, morador.nome, morador.whatsapp, codigo_hash
     )
-    
+
     return {
-        "mensagem": "Encomenda registrada com sucesso", 
-        "morador": morador.nome, 
+        "mensagem": "Encomenda registrada com sucesso",
+        "morador": morador.nome,
         "codigo": codigo_hash,
-        "notificacao": "Sendo enviada no WhatsApp em segundo plano..."
+        "notificacao": "Sendo enviada no WhatsApp em segundo plano...",
     }
+
 
 class RetiradaSchema(BaseModel):
     codigo_retirada: str
 
+
 @app.put("/registrar-retirada", status_code=status.HTTP_200_OK)
 async def registrar_retirada(dados: RetiradaSchema, db: Session = Depends(get_db)):
     # 1. Busca a encomenda pelo código de retirada
-    encomenda = db.query(Encomenda).filter(
-        Encomenda.codigo_retirada == dados.codigo_retirada
-    ).first()
+    encomenda = (
+        db.query(Encomenda)
+        .filter(Encomenda.codigo_retirada == dados.codigo_retirada)
+        .first()
+    )
 
     # 2. Validações de segurança
     if not encomenda:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Código de retirada inválido ou inexistente."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Código de retirada inválido ou inexistente.",
         )
 
-    if encomenda.status == 'ENTREGUE':
+    if encomenda.status == "ENTREGUE":
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail=f"Esta encomenda já foi retirada em {encomenda.data_retirada.strftime('%d/%m/%Y às %H:%M')}."
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Esta encomenda já foi retirada em {encomenda.data_retirada.strftime('%d/%m/%Y às %H:%M')}.",
         )
 
     # 3. Atualiza o status e a data de retirada
-    encomenda.status = 'ENTREGUE'
+    encomenda.status = "ENTREGUE"
     encomenda.data_retirada = datetime.datetime.now()
 
     db.commit()
@@ -247,7 +256,7 @@ async def registrar_retirada(dados: RetiradaSchema, db: Session = Depends(get_db
         "mensagem": "Retirada confirmada!",
         "entregue_para": encomenda.morador.nome,
         "apartamento": f"{encomenda.morador.apartamento} - Bloco {encomenda.morador.bloco}",
-        "horario_retirada": encomenda.data_retirada.strftime("%H:%M:%S")
+        "horario_retirada": encomenda.data_retirada.strftime("%H:%M:%S"),
     }
 
 
@@ -260,7 +269,13 @@ async def notificar_morador_whatsapp(nome: str, telefone: str, codigo: str):
         return
 
     # Formatação do telefone
-    telefone_formatado = telefone.replace("+", "").replace("-", "").replace(" ", "").replace("(", "").replace(")", "")
+    telefone_formatado = (
+        telefone.replace("+", "")
+        .replace("-", "")
+        .replace(" ", "")
+        .replace("(", "")
+        .replace(")", "")
+    )
     if not telefone_formatado.startswith("55"):
         telefone_formatado = f"55{telefone_formatado}"
 
@@ -280,15 +295,15 @@ async def notificar_morador_whatsapp(nome: str, telefone: str, codigo: str):
     try:
         motor_assincrono = AsyncTwilioHttpClient()
         client = Client(account_sid, auth_token, http_client=motor_assincrono)
-            
+
         # Dispara a mensagem de forma assíncrona
         message = await client.messages.create_async(
-            from_="whatsapp:+14155238886", # Verficar número do Twilio para WhatsApp
+            from_="whatsapp:+14155238886",  # Verficar número do Twilio para WhatsApp
             body=mensagem,
-            to=f"whatsapp:+{telefone_formatado}"
+            to=f"whatsapp:+{telefone_formatado}",
         )
         print(f"🟢 [TWILIO ENVIADO] Mensagem processada! SID: {message.sid}")
-        
+
     except Exception as e:
         print(f"🔴 [ERRO TWILIO] Falha ao enviar a mensagem: {str(e)}")
 
@@ -301,7 +316,13 @@ async def solicitar_comprovante_whatsapp(nome: str, telefone: str):
         return
 
     # Formatação do telefone
-    telefone_formatado = telefone.replace("+", "").replace("-", "").replace(" ", "").replace("(", "").replace(")", "")
+    telefone_formatado = (
+        telefone.replace("+", "")
+        .replace("-", "")
+        .replace(" ", "")
+        .replace("(", "")
+        .replace(")", "")
+    )
     if not telefone_formatado.startswith("55"):
         telefone_formatado = f"55{telefone_formatado}"
 
@@ -318,42 +339,43 @@ async def solicitar_comprovante_whatsapp(nome: str, telefone: str):
     try:
         motor_assincrono = AsyncTwilioHttpClient()
         client = Client(account_sid, auth_token, http_client=motor_assincrono)
-            
+
         message = await client.messages.create_async(
-            from_="whatsapp:+14155238886", # Verficar número do Twilio para WhatsApp
+            # from_="whatsapp:+14155238886",  Verficar número do Twilio para WhatsApp
+            from_="whatsapp:+5521966242910",
             body=mensagem,
-            to=f"whatsapp:+{telefone_formatado}"
+            to=f"whatsapp:+{telefone_formatado}",
         )
         print(f"🟢 [TWILIO BOAS-VINDAS] Enviado para {nome}! SID: {message.sid}")
-        
+
     except Exception as e:
         print(f"🔴 [ERRO TWILIO] Falha ao solicitar comprovante: {str(e)}")
 
 
-# Rota 4: Consultar Moradores e Encomendas 
+# Rota 4: Consultar Moradores e Encomendas
 @app.get("/consultar-morador/{bloco}/{apartamento}", status_code=status.HTTP_200_OK)
 async def consultar_morador(
-    bloco: str,
-    apartamento: str,
-    db: Session = Depends(get_db)
+    bloco: str, apartamento: str, db: Session = Depends(get_db)
 ):
     # 1. Busca o morador usando bloco e apartamento
-    morador = db.query(Morador).filter(
-        Morador.bloco == bloco,
-        Morador.apartamento == apartamento
-    ).first()
+    morador = (
+        db.query(Morador)
+        .filter(Morador.bloco == bloco, Morador.apartamento == apartamento)
+        .first()
+    )
 
     if not morador:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Morador não encontrado para este bloco e apartamento."
+            detail="Morador não encontrado para este bloco e apartamento.",
         )
 
-    # 2. Busca encomendas pendentes 
-    encomendas_pendentes = db.query(Encomenda).filter(
-        Encomenda.morador_id == morador.id,
-        Encomenda.status != 'ENTREGUE' 
-    ).all()
+    # 2. Busca encomendas pendentes
+    encomendas_pendentes = (
+        db.query(Encomenda)
+        .filter(Encomenda.morador_id == morador.id, Encomenda.status != "ENTREGUE")
+        .all()
+    )
 
     # 3. Formata a resposta
     return {
@@ -361,16 +383,13 @@ async def consultar_morador(
             "id": morador.id,
             "nome": morador.nome,
             "whatsapp": morador.whatsapp,
-            "status_validacao": morador.status_validacao
+            "status_validacao": morador.status_validacao,
         },
         "total_encomendas_pendentes": len(encomendas_pendentes),
         "encomendas": [
-            {
-                "codigo_retirada": enc.codigo_retirada,
-                "status": enc.status
-            } 
+            {"codigo_retirada": enc.codigo_retirada, "status": enc.status}
             for enc in encomendas_pendentes
-        ]
+        ],
     }
 
 
@@ -379,34 +398,53 @@ async def consultar_morador(
 async def listar_encomendas_pendentes(db: Session = Depends(get_db)):
     # Faz um JOIN entre Encomenda e Morador para pegar os dados de ambos
     # Filtra apenas as encomendas que não foram entregues
-    resultados = db.query(Encomenda, Morador).join(
-        Morador, Encomenda.morador_id == Morador.id
-    ).filter(
-        Encomenda.status != 'ENTREGUE'
-    ).all()
+    resultados = (
+        db.query(Encomenda, Morador)
+        .join(Morador, Encomenda.morador_id == Morador.id)
+        .filter(Encomenda.status != "ENTREGUE")
+        .all()
+    )
 
     # Se não houver nada pendente
     if not resultados:
         return {
             "mensagem": "A portaria está limpa! Nenhuma encomenda pendente.",
             "total_pendentes": 0,
-            "encomendas": []
+            "encomendas": [],
         }
 
     # Monta a lista formatada
     lista_pendentes = []
     for encomenda, morador in resultados:
-        lista_pendentes.append({
-            "codigo_retirada": encomenda.codigo_retirada,
-            "status": encomenda.status,
-            "morador": {
-                "nome": morador.nome,
-                "bloco": morador.bloco,
-                "apartamento": morador.apartamento
+        lista_pendentes.append(
+            {
+                "codigo_retirada": encomenda.codigo_retirada,
+                "status": encomenda.status,
+                "morador": {
+                    "nome": morador.nome,
+                    "bloco": morador.bloco,
+                    "apartamento": morador.apartamento,
+                },
             }
-        })
+        )
 
+    return {"total_pendentes": len(lista_pendentes), "encomendas": lista_pendentes}
+
+# Rota 6: Listar Moradores (geral)
+@app.get("/listar-moradores", status_code=status.HTTP_200_OK)
+async def listar_moradores(db: Session = Depends(get_db)):
+    moradores = db.query(Morador).all()
     return {
-        "total_pendentes": len(lista_pendentes),
-        "encomendas": lista_pendentes
+        "total_moradores": len(moradores),
+        "moradores": [
+            {
+                "id": morador.id,
+                "nome": morador.nome,
+                "whatsapp": morador.whatsapp,
+                "bloco": morador.bloco,
+                "apartamento": morador.apartamento,
+                "status_validacao": morador.status_validacao,
+            }
+            for morador in moradores
+        ],
     }

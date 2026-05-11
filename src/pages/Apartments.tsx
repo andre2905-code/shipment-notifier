@@ -1,19 +1,30 @@
 import { Plus } from "lucide-react";
 
+type Apartment = {
+  id: number;
+  nome: string;
+  whatsapp: string;
+  bloco: string;
+  apartamento: string;
+  status_validacao: string;
+};
+
 const apts = [
   {
     id: 1,
-    ape_numero: "101",
-    block: "Bloco A",
-    inquilino: "João Silva",
-    telefone: "(11) 92345-6789",
+    nome: "João Silva",
+    whatsapp: "+5511923456789",
+    bloco: "Bloco A",
+    apartamento: "101",
+    status_validacao: "PENDENTE",
   },
   {
     id: 2,
-    ape_numero: "102",
-    block: "Bloco A",
-    inquilino: "Maria Oliveira",
-    telefone: "(11) 98765-4321",
+    nome: "Maria Oliveira",
+    whatsapp: "+5511987654321",
+    bloco: "Bloco A",
+    apartamento: "102",
+    status_validacao: "PENDENTE",
   },
 ]
 
@@ -33,9 +44,9 @@ const Apartments = () => {
         </div>
       ) : apts.map((apt) => (
         <div key={apt.id} className="apartment-card">
-          <h3>Apartamento {apt.ape_numero} - {apt.block}</h3>
-          <p>Inquilino: {apt.inquilino}</p>
-          <p>Telefone: {apt.telefone}</p>
+          <h3>Apartamento {apt.apartamento} - {apt.bloco}</h3>
+          <p>Inquilino: {apt.nome}</p>
+          <p>Telefone: {apt.whatsapp}</p>
         </div>
       ))}
     </section>

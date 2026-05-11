@@ -305,6 +305,120 @@ curl -X PUT http://localhost:8000/registrar-retirada \
 
 ---
 
+### 5. Query Resident Information
+
+**Endpoint:** `GET /consultar-morador/{bloco}/{apartamento}`
+
+**Description:** Query information about a specific resident and their pending packages.
+
+**Status Code:** `200 OK`
+
+**Path Parameters:**
+| Parameter | Type | Description | Required |
+|-----------|------|-------------|----------|
+| `bloco` | String | Building/block identifier | Yes |
+| `apartamento` | String | Apartment number | Yes |
+
+**Example Request:**
+```bash
+curl -X GET http://localhost:8000/consultar-morador/A/101
+```
+
+**Success Response:**
+```json
+{
+  "morador": {
+    "id": 1,
+    "nome": "João Silva",
+    "whatsapp": "+5511952786261",
+    "status_validacao": "APROVADO"
+  },
+  "total_encomendas_pendentes": 2,
+  "encomendas": [
+    {
+      "codigo_retirada": "456789",
+      "status": "AGUARDANDO"
+    },
+    {
+      "codigo_retirada": "123456",
+      "status": "AGUARDANDO"
+    }
+  ]
+}
+```
+
+**Error Responses:**
+
+| Status | Detail |
+|--------|--------|
+| `404 Not Found` | "Morador não encontrado para este bloco e apartamento." |
+
+**Notes:**
+- Returns resident information along with pending packages (not yet picked up)
+- Includes only packages with status different from `ENTREGUE`
+
+---
+
+### 6. List All Pending Packages
+
+**Endpoint:** `GET /encomendas-pendentes`
+
+**Description:** Retrieve a comprehensive list of all pending packages in the condominium with associated resident information.
+
+**Status Code:** `200 OK`
+
+**Query Parameters:** None
+
+**Example Request:**
+```bash
+curl -X GET http://localhost:8000/encomendas-pendentes
+```
+
+**Success Response (With Pending Packages):**
+```json
+{
+  "total_pendentes": 2,
+  "encomendas": [
+    {
+      "codigo_retirada": "456789",
+      "status": "AGUARDANDO",
+      "morador": {
+        "nome": "João Silva",
+        "bloco": "A",
+        "apartamento": "101"
+      }
+    },
+    {
+      "codigo_retirada": "123456",
+      "status": "AGUARDANDO",
+      "morador": {
+        "nome": "Maria Santos",
+        "bloco": "B",
+        "apartamento": "202"
+      }
+    }
+  ]
+}
+```
+
+**Success Response (No Pending Packages):**
+```json
+{
+  "mensagem": "A portaria está limpa! Nenhuma encomenda pendente.",
+  "total_pendentes": 0,
+  "encomendas": []
+}
+```
+
+**Error Responses:** None (endpoint always returns 200 OK)
+
+**Notes:**
+- Lists only packages with status different from `ENTREGUE`
+- Useful for porter/concierge to see what packages are waiting for pickup
+- Returns empty list if no pending packages exist
+
+---
+
 ## Enums & Status Codes
 
 ### StatusValidacao (Resident Validation Status)
