@@ -1,19 +1,11 @@
-import { Plus } from "lucide-react";
-
-type Apartment = {
-  id: number;
-  nome: string;
-  whatsapp: string;
-  bloco: string;
-  apartamento: string;
-  status_validacao: string;
-};
+import { Plus, MessageCircle } from "lucide-react";
+import { ApartmentType } from "./types";
 
 const apts = [
   {
     id: 1,
     nome: "João Silva",
-    whatsapp: "+5511923456789",
+    whatsapp: "11923456789",
     bloco: "Bloco A",
     apartamento: "101",
     status_validacao: "PENDENTE",
@@ -21,7 +13,7 @@ const apts = [
   {
     id: 2,
     nome: "Maria Oliveira",
-    whatsapp: "+5511987654321",
+    whatsapp: "11987654321",
     bloco: "Bloco A",
     apartamento: "102",
     status_validacao: "PENDENTE",
@@ -45,8 +37,8 @@ const Apartments = () => {
       ) : apts.map((apt) => (
         <div key={apt.id} className="apartment-card">
           <h3>Apartamento {apt.apartamento} - {apt.bloco}</h3>
-          <p>Inquilino: {apt.nome}</p>
-          <p>Telefone: {apt.whatsapp}</p>
+          <p><strong>Inquilino:</strong> {apt.nome}</p>
+          <p><strong>Telefone:</strong> {apt.whatsapp}</p>
         </div>
       ))}
     </section>

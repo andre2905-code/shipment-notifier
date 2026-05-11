@@ -61,3 +61,37 @@ section .no-results {
   text-align: center;
   border: 1px solid var(--border-color);
 }
+
+/* Apartment's Section */
+section.apartments .apartment-card {
+  border: 1px solid var(--border-color);
+  border-radius: var(--rounded-lg);
+  padding: 1rem;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+/* Notification's section */
+
+section.notifications .notification-card {
+  border: 1px solid var(--border-color);
+  border-radius: var(--rounded-lg);
+  padding: 1rem;
+  margin-bottom: 1rem;
+  position: relative;
+}
+
+section.notifications .notification-card .message-button {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  padding: .5rem;
+  background-color: #20BA60;
+  color: #fff;
+  border-radius: var(--rounded-lg);
+  display: flex;
+  gap: .375rem;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+}
