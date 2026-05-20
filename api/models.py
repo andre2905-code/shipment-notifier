@@ -5,10 +5,10 @@ from database import Base
 
 # --- ENUMS NATIVOS DO PYTHON ---
 # Herdam apenas de (str, enum.Enum) para funcionarem corretamente no Python e no Banco
-class StatusValidacao(str, enum.Enum):
-    PENDENTE = 'PENDENTE'
-    APROVADO = 'APROVADO'
-    REJEITADO = 'REJEITADO'
+#class StatusValidacao(str, enum.Enum):
+#    PENDENTE = 'PENDENTE'
+#    APROVADO = 'APROVADO'
+#    REJEITADO = 'REJEITADO'
 
 class StatusEncomenda(str, enum.Enum):
     AGUARDANDO = 'AGUARDANDO'
@@ -20,12 +20,11 @@ class Morador(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(100))
-    whatsapp = Column(String(20))
+    email = Column(String(100))
     bloco = Column(String(10))
     apartamento = Column(String(10))
-    
+
     # Utilizando o Enum do SQLAlchemy passando a classe do Python
-    status_validacao = Column(Enum(StatusValidacao), default=StatusValidacao.PENDENTE)
     data_cadastro = Column(DateTime(timezone=True), server_default=func.now())
 
     # RELACIONAMENTO: Permite acessar lista de encomendas e apaga os pacotes se o morador for deletado
@@ -37,7 +36,7 @@ class Encomenda(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     morador_id = Column(Integer, ForeignKey("moradores.id"))
-    
+
     # Utilizando o Enum do SQLAlchemy passando a classe do Python
     status = Column(Enum(StatusEncomenda), default=StatusEncomenda.AGUARDANDO)
     codigo_retirada = Column(String(64), unique=True)

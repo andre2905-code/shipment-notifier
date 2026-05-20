@@ -1,31 +1,28 @@
-import { Plus, MessageCircle } from "lucide-react";
-import { ApartmentType } from "./types";
-
-const apts = [
-  {
-    id: 1,
-    nome: "João Silva",
-    whatsapp: "11923456789",
-    bloco: "Bloco A",
-    apartamento: "101",
-    status_validacao: "PENDENTE",
-  },
-  {
-    id: 2,
-    nome: "Maria Oliveira",
-    whatsapp: "11987654321",
-    bloco: "Bloco A",
-    apartamento: "102",
-    status_validacao: "PENDENTE",
-  },
-]
+import { Plus } from "lucide-react";
+import { ApartmentType } from "../types";
+import { useEffect, useState } from "react";
+import { fetchApartments } from "../services/api";
+import CreateAptModal from "../components/CreateAptModal";
 
 const Apartments = () => {
+  const [apts, setApts] = useState<ApartmentType[]>([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const loadApartments = () => {
+    fetchApartments()
+      .then((data) => setApts(data.moradores))
+      .catch((error) => console.error("Error fetching apartments:", error));
+  };
+
+  useEffect(() => {
+    loadApartments();
+  }, []);
+
   return (
     <section className="apartments">
       <div className="section-heading">
         <h2>APARTAMENTOS</h2>
-        <button className="add-button">
+        <button className="add-button" onClick={() => setShowCreateModal(true)}>
           <Plus size={16} />
           <span>Cadastrar</span>
         </button>
@@ -38,9 +35,19 @@ const Apartments = () => {
         <div key={apt.id} className="apartment-card">
           <h3>Apartamento {apt.apartamento} - {apt.bloco}</h3>
           <p><strong>Inquilino:</strong> {apt.nome}</p>
-          <p><strong>Telefone:</strong> {apt.whatsapp}</p>
+          <p><strong>Email:</strong> {apt.email}</p>
         </div>
       ))}
+      {showCreateModal && (
+        <CreateAptModal
+          opened={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={() => {
+            loadApartments();
+            setShowCreateModal(false);
+          }}
+        />
+      )}
     </section>
   );
 };
